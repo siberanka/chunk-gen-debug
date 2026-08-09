@@ -20,7 +20,7 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21-R0.1-SNAPSHOT")
     constraints {
-        compileOnly("org.apache.commons:commons-lang3:3.18.0") {
+        compileOnly("org.apache.commons:commons-lang3:3.20.0") {
             because("CVE-2025-48924 affects the older Paper API compile-classpath version")
         }
         compileOnly("org.codehaus.plexus:plexus-utils:3.6.1") {
