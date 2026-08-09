@@ -18,7 +18,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:26.2.build.100-stable")
     constraints {
         compileOnly("org.apache.commons:commons-lang3:3.18.0") {
             because("CVE-2025-48924 affects the older Paper API compile-classpath version")
@@ -92,7 +92,7 @@ tasks.register("verifyPaperApiChecksum") {
     inputs.files(configurations.compileClasspath)
     doLast {
         val candidates = inputs.files.files.filter {
-            it.name == "paper-api-1.21-R0.1-SNAPSHOT.jar"
+            it.name == "paper-api-26.2.build.100-stable.jar"
         }
         check(candidates.size == 1) { "Expected exactly one Paper 1.21 API JAR, found $candidates" }
         val digest = MessageDigest.getInstance("SHA-256")
