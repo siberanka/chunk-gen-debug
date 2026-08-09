@@ -1,0 +1,24 @@
+# Configuration schema. Unsupported future schemas fail closed.
+schema-version: 1
+
+logging:
+  # Event producers never block a tick/region thread. New records are dropped
+  # when this bounded queue is full, and an explicit overflow record is emitted.
+  queue-capacity: 16384
+  max-open-files: 48
+  max-file-size-mib: 64
+  retained-files: 5
+  flush-interval-ms: 1000
+  shutdown-timeout-ms: 5000
+
+diagnostics:
+  capture-stack-traces: true
+  max-stack-frames: 80
+  max-event-listeners: 128
+  max-entity-details: 64
+  include-player-identities: false
+  correlation-ttl-ms: 15000
+  max-correlation-entries: 32768
+
+# `/cgd probe <world> <chunk-x> <chunk-z>` is permission-gated and can generate
+# terrain. Use it only in a disposable/test area when validating the log pipeline.

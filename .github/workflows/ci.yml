@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set up Java 21
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@41ad77ca97e46ee2e825d5e6b9a95d8169fcc44c # v4.4.2
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@41ad77ca97e46ee2e825d5e6b9a95d8169fcc44c # v4.4.2
+      - name: Build, test, coverage, and SBOM
+        run: ./gradlew clean check jar --no-daemon
+      - name: Scan dependency SBOM with OSV
+        run: python3 scripts/osv_scan.py build/reports/cyclonedx/bom.json
+      - name: Verify clean rebuild is reproducible
+        shell: bash
+        run: |
+          first="$(sha256sum build/libs/chunk-gen-debug-1.0.0.jar | cut -d' ' -f1)"
+          ./gradlew clean jar --no-daemon
+          second="$(sha256sum build/libs/chunk-gen-debug-1.0.0.jar | cut -d' ' -f1)"
+          test "$first" = "$second"
+          echo "sha256=$second" | tee build/artifact-sha256.txt
+          ./gradlew check --no-daemon
+      - name: Upload verified artefacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: chunk-gen-debug-1.0.0
+          path: |
+            build/libs/chunk-gen-debug-1.0.0.jar
+            build/artifact-sha256.txt
+            build/reports/cyclonedx/bom.json
+            build/reports/tests/test/
+          if-no-files-found: error
+
+  server-smoke:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: paper
+            minecraft: '1.21'
+            java: '21'
+          - platform: paper
+            minecraft: 1.21.11
+            java: '21'
+          - platform: paper
+            minecraft: 26.1.2
+            java: '25'
+          - platform: paper
+            minecraft: '26.2'
+            java: '25'
+          - platform: folia
+            minecraft: 1.21.4
+            java: '21'
+          - platform: folia
+            minecraft: 1.21.11
+            java: '21'
+          - platform: folia
+            minecraft: 26.1.2
+            java: '25'
+          - platform: folia
+            minecraft: '26.2'
+            java: '25'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set up runtime Java
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@41ad77ca97e46ee2e825d5e6b9a95d8169fcc44c # v4.4.2
+      - name: Build Java 21-compatible plugin
+        run: ./gradlew clean jar --no-daemon
+      - name: Exercise real chunk lifecycle
+        run: python3 scripts/smoke_test.py --project '${{ matrix.platform }}' --version '${{ matrix.minecraft }}'
+      - name: Upload server evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: smoke-${{ matrix.platform }}-${{ matrix.minecraft }}
+          path: smoke-work/${{ matrix.platform }}-${{ matrix.minecraft }}/server.log
+          if-no-files-found: ignore
+
+  multiverse-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set up Java 25
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@41ad77ca97e46ee2e825d5e6b9a95d8169fcc44c # v4.4.2
+      - name: Build plugin
+        run: ./gradlew clean jar --no-daemon
+      - name: Create and probe a Multiverse world
+        run: >-
+          python3 scripts/smoke_test.py --project paper --version 26.2
+          --extra-plugin-url https://github.com/Multiverse/Multiverse-Core/releases/download/5.7.3/multiverse-core-5.7.3.jar
+          --extra-plugin-sha256 c91a7c2c25ad7d878257b08c980381e8b5ffba8df63faf402242bfb56a058884
+          --before-probe-command "mv create cgd_multiverse normal"
+          --probe-world cgd_multiverse
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, server-smoke, multiverse-smoke]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set up Java 21
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build release JAR
+        run: ./gradlew clean jar --no-daemon
+      - name: Verify tag and publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          test "${GITHUB_REF_NAME}" = "v1.0.0"
+          sha256sum build/libs/chunk-gen-debug-1.0.0.jar > build/libs/chunk-gen-debug-1.0.0.jar.sha256
+          gh release create "$GITHUB_REF_NAME" \
+            build/libs/chunk-gen-debug-1.0.0.jar \
+            build/libs/chunk-gen-debug-1.0.0.jar.sha256 \
+            --verify-tag --title "chunk-gen-debug 1.0.0" --notes-file RELEASE_NOTES.md

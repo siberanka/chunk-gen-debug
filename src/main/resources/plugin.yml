@@ -1,0 +1,24 @@
+name: chunk-gen-debug
+version: '${version}'
+main: com.siberanka.chunkgendebug.ChunkGenDebugPlugin
+description: Forensic, per-world chunk generation/load/unload diagnostics
+author: siberanka
+website: https://github.com/siberanka/chunk-gen-debug
+api-version: '1.21'
+load: STARTUP
+folia-supported: true
+commands:
+  chunkgendebug:
+    description: Shows status or atomically reloads chunk-gen-debug configuration
+    usage: /<command> [status|reload|probe <world> <chunk-x> <chunk-z>]
+    aliases: [cgd]
+    permission: chunkgendebug.admin
+permissions:
+  chunkgendebug.admin:
+    description: Allows chunk-gen-debug status and reload commands
+    default: op
+    children:
+      chunkgendebug.probe: true
+  chunkgendebug.probe:
+    description: Allows explicit chunk generation/load/unload diagnostic probes
+    default: op
