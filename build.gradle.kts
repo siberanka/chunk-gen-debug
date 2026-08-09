@@ -23,7 +23,7 @@ dependencies {
         compileOnly("org.apache.commons:commons-lang3:3.18.0") {
             because("CVE-2025-48924 affects the older Paper API compile-classpath version")
         }
-        compileOnly("org.codehaus.plexus:plexus-utils:3.6.1") {
+        compileOnly("org.codehaus.plexus:plexus-utils:4.0.3") {
             because("CVE-2025-67030 affects the older Paper API compile-classpath version")
         }
     }
