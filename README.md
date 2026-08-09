@@ -48,7 +48,7 @@ timestamps, stack candidates, listener order, and nearby server logs together.
 |---|---|---:|---|
 | Paper | 1.21.x | 21 | Supported; CI 1.21 and 1.21.11 boundary smokes |
 | Paper | 26.x | 25 | Supported; CI 26.1.2 and 26.2 boundary smokes |
-| Folia | 1.21.x | 21 | Supported; CI earliest available 1.21.4 and 1.21.11 smokes |
+| Folia | 1.21.x | 21 | Supported; CI representative 1.21.8 and 1.21.11 smokes |
 | Folia | 26.x | 25 | Preview-supported; CI 26.1.2 and beta 26.2 smokes |
 
 The JAR is compiled to Java 21 bytecode and runs forward on Java 25. It uses the

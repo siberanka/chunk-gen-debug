@@ -17,12 +17,13 @@ Folia test found and drove removal of two world-global reads from region events.
 |---|---|---:|---|
 | Paper | 1.21.11 build 132 stable | Temurin 21.0.11 | Pass |
 | Paper | 26.2 build 111 stable | Temurin 25.0.4 | Pass |
+| Folia | 1.21.8 build 6 stable | Temurin 21.0.11 | Pass with spawn-region bootstrap |
 | Folia | 1.21.11 build 14 stable | Temurin 21.0.11 | Pass after FOLIA-001 fix |
 | Folia | 26.2 build 1 beta | Temurin 25.0.4 | Pass, including final code-state rerun |
 | Paper + Multiverse-Core | Paper 26.2-111 + MV 5.7.3 | Temurin 25.0.4 | Dynamic world pass |
 
 CI additionally blocks release on Paper 1.21/1.21.11/26.1.2/26.2 and Folia
-1.21.4/1.21.11/26.1.2/26.2 boundary tests. Folia 26.2 remains a beta upstream,
+1.21.8/1.21.11/26.1.2/26.2 representative tests. Folia 26.2 remains a beta upstream,
 so its support status is intentionally labelled preview-supported.
 
 Build: Gradle wrapper 8.14.3 (distribution SHA-256 pinned), Java 21 bytecode
@@ -48,6 +49,7 @@ revisioned separately so large context is not recomputed for every event.
 | ID | Severity | Confidence | Status | Regression evidence |
 |---|---|---|---|---|
 | FOLIA-001 | High | Confirmed | Fixed | Real Folia probe would throw if global ticket getters return |
+| CI-001 | Medium | Confirmed | Fixed | JDK 21 build and JDK 25 runtime phases are separate |
 | SUPPLY-001 | High/Moderate | Confirmed | Fixed | OSV gate covers patched Plexus/Commons Lang constraints |
 | PATH-001 | High | High confidence | Mitigated | traversal/collision unit tests + real-path/symlink guard |
 | PERF-001 | High | High confidence | Mitigated | bounded concurrent producer conservation test |
@@ -59,6 +61,12 @@ owned. Folia now records an explicit `UNAVAILABLE_REQUIRES_GLOBAL_REGION` value,
 preserving thread ownership rather than fabricating or asynchronously racing the
 event snapshot. The final Folia 26.2 rerun wrote 42/42 records with zero drops,
 write failures, or handler exceptions.
+
+CI-001 was exposed only by the first remote matrix: Gradle 8.14.3 cannot run the
+Java 21-targeted build under the runner's JDK 25. The matrix now builds with JDK
+21, then switches only the 26.x server process to JDK 25. The Folia harness also
+boots the spawn region before a distant probe because older Folia builds lazily
+initialise the world on its first region tick.
 
 SUPPLY-001 involved compile-only dependencies inherited from the old Paper API
 POM: Commons Lang 3.12.0 and Plexus Utils 3.5.1. They were never packaged or
@@ -74,10 +82,10 @@ scan reported zero vulnerabilities across 65 SBOM components.
 | Queue conservation | 8 producers, 16,000 records | `accepted + dropped == submitted`; accepted drained | Not a full server load profile |
 | Dependency security | `scripts/osv_scan.py build/reports/cyclonedx/bom.json` | 65 scanned, 0 findings | OSV known-vulnerability coverage |
 | Paper runtime | `scripts/smoke_test.py` on 1.21.11 and 26.2 | Pass | Isolated offline server |
-| Folia runtime | same probe on 1.21.11 and 26.2 | Pass after fix | 26.2 upstream is beta |
+| Folia runtime | same probe on 1.21.8, 1.21.11, and 26.2 | Pass after fixes | 26.2 upstream is beta |
 | Multiverse | MV 5.7.3 creates `cgd_multiverse`, then probe | 102/102 records, all streams | One representative world manager |
 | Reproducibility | two clean JAR builds | identical SHA-256 | Same host/toolchain/cache ecosystem |
-| JAR inspection | `jar tf`, `javap -verbose` | 74,226 bytes, no duplicates, class major 65 | Manual content gate |
+| JAR inspection | `jar tf`, `javap -verbose` | 74,241 bytes, no duplicates, class major 65 | Manual content gate |
 
 Local verified JAR SHA-256:
 

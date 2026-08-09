@@ -67,7 +67,7 @@ jobs:
             minecraft: '26.2'
             java: '25'
           - platform: folia
-            minecraft: 1.21.4
+            minecraft: 1.21.8
             java: '21'
           - platform: folia
             minecraft: 1.21.11
@@ -82,15 +82,20 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set up build Java 21
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@41ad77ca97e46ee2e825d5e6b9a95d8169fcc44c # v4.4.2
+      - name: Build Java 21-compatible plugin
+        run: ./gradlew clean jar --no-daemon
       - name: Set up runtime Java
         uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@41ad77ca97e46ee2e825d5e6b9a95d8169fcc44c # v4.4.2
-      - name: Build Java 21-compatible plugin
-        run: ./gradlew clean jar --no-daemon
       - name: Exercise real chunk lifecycle
         run: python3 scripts/smoke_test.py --project '${{ matrix.platform }}' --version '${{ matrix.minecraft }}'
       - name: Upload server evidence on failure
@@ -107,15 +112,20 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Set up Java 25
+      - name: Set up build Java 21
         uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: '21'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@41ad77ca97e46ee2e825d5e6b9a95d8169fcc44c # v4.4.2
       - name: Build plugin
         run: ./gradlew clean jar --no-daemon
+      - name: Set up runtime Java 25
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '25'
       - name: Create and probe a Multiverse world
         run: >-
           python3 scripts/smoke_test.py --project paper --version 26.2

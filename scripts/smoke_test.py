@@ -183,6 +183,14 @@ def main() -> int:
         for pre_command in arguments.before_probe_command:
             send(process, pre_command)
             time.sleep(10)
+        if arguments.project == "folia":
+            # Older Folia builds lazily initialise a world on its first region tick.
+            # Start the spawn region before probing a distant region; otherwise the
+            # server itself can attempt a cross-region synchronous spawn load.
+            send(process, f"cgd probe {arguments.probe_world} 0 0")
+            time.sleep(15)
+            if process.poll() is not None:
+                raise RuntimeError("Folia exited while initialising the spawn region")
         send(process, f"cgd probe {arguments.probe_world} 10000 10000")
         time.sleep(30)
         if arguments.project == "paper":
